@@ -137,15 +137,8 @@ def main():
 
     # Push tasks into event loop.
     loop.run_forever()
-
-    while True:
-        try:
-            loop.run_until_complete(asyncio.wait(tasks))
-        except Exception:
-            print('main event loop exception')
-            traceback.print_exc()
-        except KeyboardInterrupt:
-            loop.close()
+    loop.run_until_complete(asyncio.wait(tasks))
+    loop.close()
 
 
 if __name__ == '__main__':
