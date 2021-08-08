@@ -27,6 +27,9 @@ spec:
         - name: k8s-event-exporter
           image: pydo/k8s-event-exporter:latest
           imagePullPolicy: Always
+          env:
+            - name: MONGO_HOST
+              value: mongodb.default.svc.cluster.local
           envFrom:
             - secretRef:
                 name: mongodb-credentials

@@ -10,7 +10,8 @@ except ImportError:
     import events
 
 client = MongoClient(username=os.environ.get('MONGO_USERNAME', 'root'),
-                     password=os.environ.get('MONGO_PASSWORD', 'example'))
+                     password=os.environ.get('MONGO_PASSWORD', 'example'),
+                     host=os.environ.get('MONGO_HOST', 'localhost'))
 DB = client['k8s_events']
 print(DB)
 
@@ -32,4 +33,6 @@ def insert_k8s_event(obj_type: str, raw_obj: dict, event_type: str):
 
 
 if __name__ == '__main__':
+    print('Creating indexes')
     _create_indexes(event for event in dir(events) if event.endswith('_EVENT'))
+    print('Finished creating indexes')
