@@ -16,10 +16,18 @@ spec:
       labels:
         app: k8s-event-exporter
     spec:
+      initContainers:
+        - name: create-mongodb-indexes
+          image: pydo/k8s-event-exporter:latest
+          command: ["python"]
+          args: ["src/database/db.py"]
       serviceAccountName: k8s-event-exporter
       containers:
         - name: k8s-event-exporter
-          image: gcr.io/namespace/k8s-event-exporter
+          image: pydo/k8s-event-exporter:latest
+          envFrom:
+            - secretRef:
+                name: mongodb-credentials
 ---
 kind: ServiceAccount
 apiVersion: v1

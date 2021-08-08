@@ -1,9 +1,12 @@
+import os
+
 import pymongo.errors
 from pymongo import MongoClient
 
 from database import events
 
-client = MongoClient(username="root", password="example")
+client = MongoClient(username=os.environ.get('MONGO_USERNAME', 'root'),
+                     password=os.environ.get('MONGO_PASSWORD', 'example'))
 DB = client['k8s_events']
 print(DB)
 

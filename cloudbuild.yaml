@@ -1,8 +1,0 @@
-steps:
-  - name: gcr.io/kaniko-project/executor
-    args:
-      - --destination=gcr.io/$PROJECT_ID/k8s-event-exporter
-      - --cache=true
-      - --cache-ttl=100h
-      - --dockerfile=k8s_event_logger/Dockerfile
-      - --context=k8s_event_logger
