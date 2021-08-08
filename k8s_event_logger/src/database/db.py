@@ -3,7 +3,11 @@ import os
 import pymongo.errors
 from pymongo import MongoClient
 
-from database import events
+try:
+    from database import events
+except ImportError:
+    # when creating the index our sys.path will contains the dir(db.py) instead of dir(k8s_asyncio.py)
+    import events
 
 client = MongoClient(username=os.environ.get('MONGO_USERNAME', 'root'),
                      password=os.environ.get('MONGO_PASSWORD', 'example'))

@@ -102,7 +102,7 @@ async def generic_watch_resource(resources_to_stream,
                     raise
 
 
-def rerun_on_exception(coro, *args, **kwargs):
+async def rerun_on_exception(coro, *args, **kwargs):
     """Source: https://stackoverflow.com/a/55185488"""
     while True:
         try:
