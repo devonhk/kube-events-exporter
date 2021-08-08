@@ -124,7 +124,7 @@ def main():
 
     # Load the kubeconfig file specified in the KUBECONFIG environment
     # variable, or fall back to `~/.kube/config`.
-    loop.run_until_complete(config.load_kube_config())
+    loop.run_until_complete(config.load_incluster_config())
 
     # Define the tasks to watch namespaces and pods.
     tasks = [
