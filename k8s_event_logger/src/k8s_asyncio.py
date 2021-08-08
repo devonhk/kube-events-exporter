@@ -76,11 +76,9 @@ async def generic_watch_resource(resources_to_stream,
         print(f'Starting resource watch on {object_type}')
         async with watch.Watch().stream(resources_to_stream) as stream:
             try:
+                print('try watch')
                 async for event in stream:
-
-                    if 'namespace' in event['raw_object']['metadata'] and \
-                            event['raw_object']['metadata']['namespace'] in NAMESPACE_DENYLIST:
-                        continue
+                    print('event stream loop')
 
                     if 'namespace' in event['raw_object']['metadata'] and \
                             event['raw_object']['metadata']['namespace'] in NAMESPACE_DENYLIST:
@@ -118,6 +116,7 @@ async def rerun_on_exception(coro, *args, **kwargs):
             traceback.print_exc()
         except client.exceptions.ApiException as err:
             if err.status == 401:
+                print("401 exception")
                 await config.load_kube_config()  # refresh k8s auth token
 
 
@@ -128,7 +127,7 @@ def main():
     # Load the kubeconfig file specified in the KUBECONFIG environment
     # variable, or fall back to `~/.kube/config`.
     try:
-        loop.run_until_complete(config.load_incluster_config())
+        config.load_incluster_config()
     except kubernetes_asyncio.config.config_exception.ConfigException:
         loop.run_until_complete(config.load_kube_config())
 
