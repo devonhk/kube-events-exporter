@@ -6,7 +6,7 @@ from pymongo import MongoClient
 try:
     from database import events
 except ImportError:
-    # when creating the index our sys.path will contains the dir(db.py) instead of dir(k8s_asyncio.py)
+    # when creating the index our sys.path will contain dir(database/db.py) instead of dir(k8s_asyncio.py)
     import events
 
 client = MongoClient(username=os.environ.get('MONGO_USERNAME', 'root'),
