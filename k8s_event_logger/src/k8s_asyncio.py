@@ -1,6 +1,8 @@
 """Watch multiple K8s event streams without threads."""
 import asyncio
 import traceback
+
+import kubernetes_asyncio.config.kube_config
 import uvloop
 from functools import wraps
 
@@ -106,7 +108,8 @@ async def rerun_on_exception(coro, *args, **kwargs):
     """Source: https://stackoverflow.com/a/55185488"""
     while True:
         try:
-            await coro(*args, **kwargs)
+            # await coro(*args, **kwargs)
+            await coro
         except asyncio.CancelledError:
             # don't interfere with cancellations
             raise
@@ -124,7 +127,10 @@ def main():
 
     # Load the kubeconfig file specified in the KUBECONFIG environment
     # variable, or fall back to `~/.kube/config`.
-    loop.run_until_complete(config.load_incluster_config())
+    try:
+        loop.run_until_complete(config.load_incluster_config())
+    except kubernetes_asyncio.config.config_exception.ConfigException:
+        loop.run_until_complete(config.load_kube_config())
 
     # Define the tasks to watch namespaces and pods.
     tasks = [
@@ -135,7 +141,7 @@ def main():
         asyncio.ensure_future(rerun_on_exception(watch_deployments()))
     ]
 
-    # Push tasks into event loop.
+# Push tasks into event loop.
     loop.run_forever()
     loop.run_until_complete(asyncio.wait(tasks))
     loop.close()
