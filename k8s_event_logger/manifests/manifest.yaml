@@ -22,6 +22,12 @@ spec:
           imagePullPolicy: Always
           command: ["python"]
           args: ["src/database/db.py"]
+          env:
+            - name: MONGO_HOST
+              value: mongodb.default.svc.cluster.local
+          envFrom:
+            - secretRef:
+                name: mongodb-credentials
       serviceAccountName: k8s-event-exporter
       containers:
         - name: k8s-event-exporter
