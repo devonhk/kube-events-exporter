@@ -1,15 +1,24 @@
 """Watch multiple K8s event streams without threads."""
 import asyncio
+import os
 import traceback
-
-import kubernetes_asyncio.config.kube_config
-import uvloop
 from functools import wraps
 
+import json_logging
+import kubernetes_asyncio.config.kube_config
+import logging
+import sys
+import uvloop
 from kubernetes_asyncio import client, config, watch
 
 from config import NAMESPACE_DENYLIST
 from database.db import events, insert_k8s_event
+
+# log is initialized without a web framework name
+json_logging.init_non_web(enable_json=True)
+logger = logging.getLogger("app")
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def _core_v1_api(f):
@@ -72,51 +81,59 @@ async def watch_replicasets(apps_v1_api):
 
 async def generic_watch_resource(resources_to_stream,
                                  object_type):
-    while True:
-        print(f'Starting resource watch on {object_type}')
-        async with watch.Watch().stream(resources_to_stream) as stream:
-            try:
-                print('try watch')
-                async for event in stream:
-                    print('event stream loop')
+    try:
+        while True:
+            logger.info(f'Starting resource watch on {object_type}')
+            async with watch.Watch().stream(resources_to_stream) as stream:
+                try:
+                    logger.info('try watch')
+                    async for event in stream:
+                        logger.info('event stream loop')
 
-                    if 'namespace' in event['raw_object']['metadata'] and \
-                            event['raw_object']['metadata']['namespace'] in NAMESPACE_DENYLIST:
+                        if 'namespace' in event['raw_object']['metadata'] and \
+                                event['raw_object']['metadata']['namespace'] in NAMESPACE_DENYLIST:
+                            continue
+
+                        evt, obj = event['type'], event['object']
+                        logger.info(f"{evt} {obj.kind} {obj.metadata.name} in NS {obj.metadata.namespace}")
+
+                        insert_k8s_event(obj_type=object_type,
+                                         raw_obj=event['raw_object'],
+                                         event_type=evt)
+
+                except client.exceptions.ApiException as err:
+                    if err.status == 410:
+                        logger.info('happens sometimes, idk why')
                         continue
+                    if err.status == 401:
+                        logger.info("auth TOKEN probably expired")
+                        logger.info('refreshing auth TOKEN')
+                        # await config.load_kube_config()
+                        raise
 
-                    evt, obj = event['type'], event['object']
-                    print(f"{evt} {obj.kind} {obj.metadata.name} in NS {obj.metadata.namespace}")
-
-                    insert_k8s_event(obj_type=object_type,
-                                     raw_obj=event['raw_object'],
-                                     event_type=evt)
-
-            except client.exceptions.ApiException as err:
-                if err.status == 410:
-                    print('happens sometimes, idk why')
-                    raise
-                if err.status == 401:
-                    print("auth TOKEN probably expired")
-                    print('refreshing auth TOKEN')
-                    # await config.load_kube_config()
-                    raise
+    # temporary stopgap to catch bugs in the watchers
+    except Exception:
+        logger.fatal(f'generic watch exception resources_to_stream:{resources_to_stream}')
+        traceback.print_exc()
+        os._exit(1)
 
 
+# TODO: fix bug where we await the same coroutine twice
 async def rerun_on_exception(coro, *args, **kwargs):
     """Source: https://stackoverflow.com/a/55185488"""
     while True:
         try:
-            # await coro(*args, **kwargs)
+            logger.debug(f"awaiting coroutine {repr(coro)}")
             await coro
         except asyncio.CancelledError:
             # don't interfere with cancellations
             raise
         except Exception:  # noqa
-            print("Caught exception")
+            logger.error("Caught exception")
             traceback.print_exc()
         except client.exceptions.ApiException as err:
             if err.status == 401:
-                print("401 exception")
+                logger.warning("401 exception")
                 await config.load_kube_config()  # refresh k8s auth token
 
 
@@ -140,7 +157,8 @@ def main():
         asyncio.ensure_future(rerun_on_exception(watch_deployments()))
     ]
 
-# Push tasks into event loop.
+    # Push tasks into event loop.
+    logger.info("Starting watch tasks")
     loop.run_forever()
     loop.run_until_complete(asyncio.wait(tasks))
     loop.close()

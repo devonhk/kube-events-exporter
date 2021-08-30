@@ -36,4 +36,4 @@ jobs:
         with:
           push: true
           context: k8s_event_logger
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }},pydo/k8s_event_logger:latest
